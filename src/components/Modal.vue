@@ -1,11 +1,11 @@
 <script setup>
-import {ref} from 'vue';
+import {computed, ref} from 'vue';
 import cerrarModal from '../assets/img/cerrar.svg';
 import Alerta from './Alerta.vue'
 
 const error = ref('');
 
-const emit = defineEmits(['ocultar-modal','guardar-gasto','update:nombre','update:cantidad','update:categoria']);
+const emit = defineEmits(['ocultar-modal','guardar-gasto','eliminar-gasto','update:nombre','update:cantidad','update:categoria']);
 const props = defineProps({
     modal:{
         type:Object,
@@ -26,12 +26,18 @@ const props = defineProps({
     disponible:{
         type:Number,
         required:true
+    },
+    id:{
+        type:[String,null],
+        required:true
     }
 })
 
+const old = props.cantidad;
+
 const agregarGasto = ()=>{
     // Validar que todos los campos tengan algo
-    const {cantidad,categoria,nombre,disponible} = props
+    const {cantidad,categoria,nombre,disponible,id} = props
     if ([nombre,cantidad,categoria].includes('')) {
         error.value = "Todos los campos son obligatorios"
         resetErrorMessage();
@@ -44,19 +50,29 @@ const agregarGasto = ()=>{
         resetErrorMessage();
         return;
     }
-    if(cantidad>disponible){
-        error.value = "Has excedido el presupuesto"
-        resetErrorMessage();
-        return;
+
+    if (id) {
+        if(cantidad>old+disponible){
+            error.value = "Has excedido el presupuesto"
+            resetErrorMessage();
+            return;
+        }
+    } else {
+        if(cantidad>disponible){
+            error.value = "Has excedido el presupuesto"
+            resetErrorMessage();
+            return;
+        }
     }
 
-
     emit('guardar-gasto')
+
 }
 
 const resetErrorMessage = ()=>{
     setTimeout(()=>{error.value=''},3000)
 }
+const isEditing = computed(()=>{return props.id})
 </script>
 
 <template>
@@ -75,7 +91,7 @@ const resetErrorMessage = ()=>{
                 class="nuevo-gasto"
                 @submit.prevent="agregarGasto"
             >
-                <legend>Añadir gasto</legend>
+                <legend>{{ isEditing ? 'Guardar Cambios':'Añadir gasto' }}</legend>
                 <Alerta v-if="error">{{ error }}</Alerta>
                 <div class="campo">
                     <label for="nombre">Nombre Gasto:</label>
@@ -116,9 +132,17 @@ const resetErrorMessage = ()=>{
                 </div>
                 <input 
                     type="submit"
-                    value="Añadir gasto"
+                    :value="[isEditing?'Guardar Cambios':'Añadir gasto']"
                 />
             </form>
+            <button 
+                type="button"
+                class="btn-eliminar"
+                v-if="isEditing"
+                @click="$emit('eliminar-gasto')"
+            >
+                Eliminar Gasto
+            </button>
         </div>
     </div>
 </template>
@@ -186,5 +210,17 @@ const resetErrorMessage = ()=>{
     color: var(--blanco);
     font-weight: 700;
     cursor:pointer;
+}
+
+.btn-eliminar{
+    border:none;
+    padding:1rem;
+    width: 100%;
+    background-color: #ef4444;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color:var(--blanco);
+    margin-top: 10rem;
+    cursor: pointer;
 }
 </style>
